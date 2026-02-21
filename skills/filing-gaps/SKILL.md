@@ -121,6 +121,31 @@ For each linked canvas:
 - Get JTBD (primary/secondary)
 - Get relevant quotes
 
+### Step 3.5: Source Fidelity Classification
+
+Before creating any GitHub issue, classify the gap's evidence to prevent filing inferred features as concrete requests.
+
+**4-Category Evidence Taxonomy:**
+
+| Category | Criteria | Filing Action |
+|----------|----------|---------------|
+| **(a) User-reported bug** | Direct quote describes broken behavior ("X doesn't work", "X shows wrong value") | File as issue |
+| **(b) User-expressed need** | Quote contains explicit request ("I wish...", "Would like to see...", "Can I...") | File as issue |
+| **(c) Observed behavioral gap** | User behavior implies X but no explicit quote requesting it | File with `observed-pattern` label added to labels array |
+| **(d) Inferred feature** | Extrapolated from user vision/sentiment — no direct quote supports the specific issue | **BLOCK — do not file** |
+
+**Gate Logic:**
+
+1. Locate the supporting quote in the source canvas's Quotes Library
+2. Verify the quote **directly** supports the issue being filed — no interpretation required
+3. If the quote requires interpretation to connect to the issue → classify as category (c) or (d)
+4. For category (d): output warning explaining why this gap cannot be filed, suggest keeping it in canvas hypotheses. Log the block to `grimoires/loa/NOTES.md` learnings section
+5. For category (c): proceed with filing but add `observed-pattern` to the GitHub labels
+
+**Provenance**: This gate was added after midi#95 was retracted (2026-02-17) — a user's vision statement was extrapolated into a feature request without direct quote support.
+
+---
+
 ### Step 4: Map to Taxonomy Labels
 
 **Gap Type → Artifact Type:**
@@ -222,6 +247,62 @@ For each linked canvas:
 - **Reality**: `grimoires/observer/reality/{component}-reality.md`
 - **Canvas(es)**: {list of source canvases}
 ```
+
+### Step 5.5: Enrich with Visual Evidence
+
+Before generating the issue command, scan the MER timeline for snapshots of the affected wallet:
+
+```bash
+# Find MERs for the affected wallet(s) from gap report
+wallet_alias=$(echo "$gap" | grep -oP 'Canvas: `canvas/\K[^.]+')
+mer_files=$(grep -rl "wallet_alias: $wallet_alias" grimoires/observer/timeline/MER-*.md 2>/dev/null || true)
+```
+
+If MER(s) found:
+
+1. Extract from the most recent MER:
+   - `screenshot_url` from frontmatter (may be null)
+   - `combined_score`, `overall_rank`, `crowd_tier_display`, `elite_tier_display` from Data State
+   - `mer_id` for cross-reference
+
+2. Append a **Visual Evidence** section to the issue body (before Labels):
+
+```markdown
+### Visual Evidence
+
+**MER**: [[timeline/{mer_id}]]
+**Snapshot Date**: {event_date}
+
+![Profile Snapshot]({screenshot_url})
+
+### Score Position at Capture
+
+| Metric | Value |
+|--------|-------|
+| Combined Score | {combined_score} |
+| Overall Rank | #{overall_rank} |
+| Crowd Tier | {crowd_tier_display} |
+| Elite Tier | {elite_tier_display} |
+```
+
+3. If no screenshot URL (visual capture failed or data-only MER):
+
+```markdown
+### Visual Evidence
+
+**MER**: [[timeline/{mer_id}]] (data-only, no screenshot)
+
+### Score Position at Capture
+
+| Metric | Value |
+|--------|-------|
+| Combined Score | {combined_score} |
+| Overall Rank | #{overall_rank} |
+| Crowd Tier | {crowd_tier_display} |
+| Elite Tier | {elite_tier_display} |
+```
+
+**Graceful fallback**: If no MER exists for the affected wallet, skip this section entirely — the issue is filed with text-only evidence (existing behavior).
 
 ### Step 6: Output Issue Command
 
@@ -368,6 +449,62 @@ Gap report updated: grimoires/crucible/gaps/reward-understanding-gaps.md
 - Check for `.github` directory → GitHub
 - Check for `linear.config.json` → Linear
 - Use `--provider` flag to override
+
+---
+
+## Counterfactuals — Issue Routing & Gap Classification
+
+Filing gaps bridges the research layer (canvases, gap reports) and the engineering layer (GitHub issues, labels, repos). The failure modes are routing errors — sending the right signal to the wrong destination, or mislabeling the signal's nature.
+
+### Target (Correct Behavior)
+
+The skill reads a gap report from `/analyze-gap`, resolves the target repository by examining which codebase owns the affected component, selects labels from the repo's existing label taxonomy, drafts an issue body with evidence from the gap report (user quotes, expected vs. actual, source canvases), and files via `gh issue create`. Before filing, it checks for existing issues with similar titles or gap IDs to prevent duplicates.
+
+The repo routing decision follows component ownership:
+- Score calculation logic → `score-api`
+- Frontend display, UX, page behavior → `midi-interface`
+- Framework/tooling → `loa` or `loa-constructs`
+- Ambiguous → ask the operator
+
+### Near Miss — Semantic Drift
+
+The seductively wrong behavior: routing by keyword rather than component ownership.
+
+A gap report says: "User expected their OG score to reflect recent mints, but the displayed score hasn't updated." The word "score" appears — so the skill routes to `score-api`. But the actual gap may be:
+- **score-api**: The scoring engine hasn't recalculated (calculation bug)
+- **midi-interface**: The frontend is caching stale data (display bug)
+- **Both**: The score updated but the frontend didn't refetch (integration gap)
+
+Keyword matching ("score" → score-api) creates systematic misrouting. The correct signal is the *component boundary where the gap lives*: if the score-api returns the correct value but the frontend shows the old one, it's a frontend issue regardless of the word "score" in the description.
+
+The skill should trace the data flow: user action → API call → response → display. The gap lives at the boundary where expected and actual diverge. Filing to the wrong repo means the issue sits unnoticed by the team that can fix it.
+
+### Category Error — Layer Violation
+
+The fundamentally wrong behavior: filing a gap as a bug when it is actually a feature request, or vice versa.
+
+The distinction matters because bugs and feature requests follow different workflows:
+- **Bug**: something broke or doesn't match specification → fix, regression test
+- **Feature request**: something works as designed but doesn't match user expectation → evaluate, prioritize, maybe build
+- **Discoverability gap**: the feature exists but the user can't find it → UX improvement, documentation
+
+A user says "I thought cubquest badges would show up in my score." This could be:
+- A **bug** if cubquest badges are supposed to be included in the scoring model
+- A **feature request** if cubquest badges are intentionally excluded
+- A **discoverability gap** if cubquest badges *are* included but under a different label
+
+The gap report from `/analyze-gap` provides the `gap_type` field (Bug | Feature | Discoverability), but the skill must verify this classification against code reality before filing. A gap report generated from user quotes alone may misclassify — the user's expectation is not the specification. Cross-referencing the gap report's `expected` field against the actual codebase behavior (from `/ground` reality files) resolves the ambiguity.
+
+Filing a feature request as a bug creates false urgency. Filing a bug as a feature request creates false patience. Both waste engineering time.
+
+A concrete example from this ecosystem: a user reports "my cubquest badges don't show in my score." The gap report says `expected: cubquest badges contribute to score` vs `actual: cubquest badges not visible in score breakdown`.
+
+Possible classifications:
+- **Bug**: The scoring model includes cubquest badges but the frontend `holdings_breakdown` component doesn't display them → fix the display code
+- **Feature**: The scoring model intentionally excludes cubquest badges (only mibera badges count) → product decision needed, not a code fix
+- **Discoverability**: Cubquest badges DO contribute (via the `nft_score` dimension) but aren't labeled as "cubquest" in the UI → improve labeling
+
+Each classification routes to a different team with different urgency. The filing skill must check the score-api's factor configuration (which badge types are included) before choosing the classification. The gap report alone — based on user quotes — cannot resolve this ambiguity because the user's expectation is not the specification.
 
 ---
 

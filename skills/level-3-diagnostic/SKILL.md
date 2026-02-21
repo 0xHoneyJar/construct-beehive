@@ -57,6 +57,20 @@ If funds are at risk or system is down, **fix first**. For UX friction and expec
 
 ## Workflow
 
+### Phase 0.5: Load Domain Glossary
+
+Before interpreting any user quotes or forming hypotheses:
+
+1. Read `grimoires/observer/glossary.yaml`
+2. For each quote being analyzed, check if any glossary term appears in the text (case-insensitive match on the `term` field)
+3. If a match is found:
+   - Use the `meaning` field as the canonical interpretation
+   - Note the `not` field to explicitly avoid the common misinterpretation
+   - Include `[glossary: {term}]` annotation in the diagnostic output
+4. If glossary file does not exist, proceed without — log a warning to the operator
+
+---
+
 ### Phase 1: Receive
 
 User reports something. **Resist the urge to investigate.**

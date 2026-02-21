@@ -13,15 +13,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PACK_DIR="$(dirname "$SCRIPT_DIR")"
 
 PROJECT_ROOT="${1:-.}"
-
-# Read default overlays from manifest.json if available, otherwise empty
-DEFAULT_OVERLAYS=""
-MANIFEST="$PACK_DIR/manifest.json"
-if [ -f "$MANIFEST" ] && command -v jq &>/dev/null; then
-    DEFAULT_OVERLAYS=$(jq -r '.contexts.default_overlays // "" | if type == "array" then join(",") else . end' "$MANIFEST" 2>/dev/null || echo "")
-fi
-
-OVERLAYS="${2:-$DEFAULT_OVERLAYS}"
+OVERLAYS="${2:-berachain,defi}"
 
 # Paths
 BASE_CONTEXT="$PACK_DIR/contexts/base/crypto-base.md"

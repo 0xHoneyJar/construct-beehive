@@ -21,6 +21,35 @@ Manage user canvases and shape common patterns into journey definitions for flow
 
 ---
 
+## Step 0: Collect All Signal Sources (Pre-Workflow)
+
+Before any mode executes, gather enriched signal data from all canvases.
+
+For each canvas in `grimoires/observer/canvas/*.md`:
+
+1. **Read existing sections**:
+   - `## Journey Fragments` (existing behavioral context)
+   - `## Feedback Entries (from UI)` (sentiment data from `/synthesize-feedback`)
+   - `## Score Context` (user position for weighting)
+
+2. **Merge into unified signal list**:
+   - Journey fragments provide behavioral context (goals, actions, expectations)
+   - Feedback entries provide sentiment data (FEEL, WEIGHTINGS, ACCURACY, UX)
+   - Score context provides user weight for pattern prioritization
+
+3. **Weight patterns by Score Context**:
+
+   | Signal Weight | Multiplier | Source |
+   |---------------|------------|--------|
+   | HIGH (top 1%, godfather/all_night tier) | 3x | Patterns from these users are prioritized in detection |
+   | MEDIUM (top 25%, devoted/regular tier) | 1x | Standard weight |
+   | LOW (below 25th percentile) | 0.5x | De-prioritized but not ignored |
+
+   Apply weight multiplier when counting pattern occurrences in Step 3 (Pattern Detection).
+   A HIGH-weight user's feedback entry counts as 3 occurrences toward confidence thresholds.
+
+---
+
 ## List Mode (Default)
 
 When invoked without arguments, display canvas summary.
@@ -83,6 +112,20 @@ From each canvas, extract:
 - Validation status
 - Supporting quotes
 - User type
+
+### Step 2.5: Load Domain Glossary
+
+Before pattern detection, load domain vocabulary to prevent misinterpretation during synthesis:
+
+1. Read `grimoires/observer/glossary.yaml`
+2. During pattern detection and goal extraction, check if any glossary term appears in user quotes (case-insensitive match on the `term` field)
+3. If a match is found:
+   - Use the `meaning` field as the canonical interpretation
+   - Note the `not` field to explicitly avoid the common misinterpretation
+   - Annotate journey steps with `[glossary: {term}]` where relevant
+4. If glossary file does not exist, proceed without — log a warning to the operator
+
+---
 
 ### Step 3: Pattern Detection
 
@@ -176,6 +219,20 @@ Add journey link to each source canvas frontmatter:
 linked_journeys:
   - {journey-id}
 ```
+
+### Step 5.5: Re-Wire Obsidian Links
+
+After creating or updating journey files and updating source canvas frontmatter, re-wire all affected canvases to reflect the new journey membership:
+
+```bash
+# Re-wire all canvases and journeys to reflect updated source_canvases
+bash scripts/observer/wire-obsidian-links.sh --canvases-journeys
+
+# Verify consistency
+bash scripts/observer/wire-obsidian-links.sh --canvases-journeys --verify
+```
+
+This ensures newly created journeys and their source canvases have bidirectional wiki-links. The `--canvases-journeys` mode is idempotent — safe to re-run.
 
 ### Step 6: Update Laboratory State
 

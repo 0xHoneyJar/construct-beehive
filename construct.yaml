@@ -1,23 +1,66 @@
 schema_version: 3
 name: Observer
 slug: observer
-version: 1.0.0
+version: 2.0.0
 description: User truth capture skills for hypothesis-first research
 author: 0xHoneyJar
 license: MIT
 skills:
+  # Core capture pipeline
   - slug: observing-users
     path: skills/observing-users
+  - slug: ingesting-dms
+    path: skills/ingesting-dms
+  - slug: batch-observing
+    path: skills/batch-observing
+  - slug: feedback-observing
+    path: skills/feedback-observing
+  - slug: concierge-testing
+    path: skills/concierge-testing
+  # Synthesis
   - slug: shaping-journeys
     path: skills/shaping-journeys
+  - slug: daily-synthesis
+    path: skills/daily-synthesis
+  - slug: shaping
+    path: skills/shaping
+  # Analysis
   - slug: level-3-diagnostic
     path: skills/level-3-diagnostic
   - slug: analyzing-gaps
     path: skills/analyzing-gaps
+  - slug: detecting-drift
+    path: skills/detecting-drift
+  - slug: detecting-staleness
+    path: skills/detecting-staleness
+  # Action
   - slug: filing-gaps
     path: skills/filing-gaps
+  - slug: batch-filing-gaps
+    path: skills/batch-filing-gaps
+  - slug: generating-followups
+    path: skills/generating-followups
+  # Migration
   - slug: importing-research
     path: skills/importing-research
+  # Lifecycle & maintenance
+  - slug: refreshing-artifacts
+    path: skills/refreshing-artifacts
+  - slug: snapshotting
+    path: skills/snapshotting
+  # Inner processes (SKILL.md only — cognitive primitives)
+  - slug: thinking
+    path: skills/thinking
+  - slug: listening
+    path: skills/listening
+  - slug: seeing
+    path: skills/seeing
+  - slug: speaking
+    path: skills/speaking
+  - slug: distilling
+    path: skills/distilling
+  - slug: growing
+    path: skills/growing
 repository:
   url: https://github.com/0xHoneyJar/construct-observer.git
   homepage: https://constructs.network/constructs/observer
