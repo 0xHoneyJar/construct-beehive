@@ -606,9 +606,9 @@ else
   #   responded → responded: no-op (idempotent, log warning)
   #   missing  → error logged, ingestion continues
 
-  previous_outcome=$(echo "$content" | yq -r "
-    .follow_ups[].message_ids[] | select(.id == \"$responds_to\") | .outcome
-  " | head -1)
+  previous_outcome=$(echo "$content" | yq -r --arg mid "$responds_to" '
+    .follow_ups[].message_ids[] | select(.id == $mid) | .outcome
+  ' | head -1)
 
   if [ -z "$previous_outcome" ] || [ "$previous_outcome" = "null" ]; then
     echo "ERROR: Message ID $responds_to not found in growth state for $user"
@@ -624,19 +624,19 @@ else
       late_response="true"
     fi
 
-    # Update message outcome via yq
-    content=$(echo "$content" | yq "
-      (.follow_ups[].message_ids[] | select(.id == \"$responds_to\")) .outcome = \"responded\" |
-      (.follow_ups[].message_ids[] | select(.id == \"$responds_to\")) .outcome_at = \"$now_ts\" |
-      (.follow_ups[].message_ids[] | select(.id == \"$responds_to\")) .response_date = \"$now_ts\" |
-      (.follow_ups[].message_ids[] | select(.id == \"$responds_to\")) .signal_quality = \"$signal_quality\" |
-      (.follow_ups[].message_ids[] | select(.id == \"$responds_to\")) .late_response = $late_response
-    ")
+    # Update message outcome via yq (--arg binding prevents injection)
+    content=$(echo "$content" | yq --arg mid "$responds_to" --arg ts "$now_ts" --arg sq "$signal_quality" --arg lr "$late_response" '
+      (.follow_ups[].message_ids[] | select(.id == $mid)) .outcome = "responded" |
+      (.follow_ups[].message_ids[] | select(.id == $mid)) .outcome_at = $ts |
+      (.follow_ups[].message_ids[] | select(.id == $mid)) .response_date = $ts |
+      (.follow_ups[].message_ids[] | select(.id == $mid)) .signal_quality = $sq |
+      (.follow_ups[].message_ids[] | select(.id == $mid)) .late_response = ($lr == "true")
+    ')
 
     # Update pattern counters (transition-safe)
-    pattern=$(echo "$content" | yq -r "
-      .follow_ups[].message_ids[] | select(.id == \"$responds_to\") | .question_pattern
-    " | head -1)
+    pattern=$(echo "$content" | yq -r --arg mid "$responds_to" '
+      .follow_ups[].message_ids[] | select(.id == $mid) | .question_pattern
+    ' | head -1)
 
     # Validate pattern against known allowlist (defense-in-depth against yq injection)
     allowed_patterns="probe_gap verify_action challenge_assumption explore_motivation surface_unspoken test_commitment follow_breadcrumb"
@@ -650,13 +650,13 @@ else
     if [ "$pattern_valid" = "true" ]; then
       # Decrement old bucket
       case "$previous_outcome" in
-        silence) content=$(echo "$content" | yq ".question_patterns[\"$pattern\"].silence_count -= 1") ;;
-        unknown) content=$(echo "$content" | yq ".question_patterns[\"$pattern\"].unknown_count -= 1") ;;
+        silence) content=$(echo "$content" | yq --arg p "$pattern" '.question_patterns[$p].silence_count -= 1') ;;
+        unknown) content=$(echo "$content" | yq --arg p "$pattern" '.question_patterns[$p].unknown_count -= 1') ;;
         pending) ;; # pending has no counter bucket
       esac
 
       # Increment responded_count
-      content=$(echo "$content" | yq ".question_patterns[\"$pattern\"].responded_count += 1")
+      content=$(echo "$content" | yq --arg p "$pattern" '.question_patterns[$p].responded_count += 1')
 
       # Update signal quality accumulators
       sq_numeric=""
@@ -667,10 +667,10 @@ else
       esac
 
       if [ -n "$sq_numeric" ]; then
-        content=$(echo "$content" | yq "
-          .question_patterns[\"$pattern\"].signal_quality_sum += $sq_numeric |
-          .question_patterns[\"$pattern\"].signal_quality_count += 1
-        ")
+        content=$(echo "$content" | yq --arg p "$pattern" --arg sq "$sq_numeric" '
+          .question_patterns[$p].signal_quality_sum += ($sq | tonumber) |
+          .question_patterns[$p].signal_quality_count += 1
+        ')
       fi
 
       # Recompute derived metrics (response_rate, avg_signal_quality, effectiveness_score)
@@ -679,21 +679,21 @@ else
     fi
 
     # Update hypothesis evidence (reset decay)
-    hypothesis_ref=$(echo "$content" | yq -r "
-      .follow_ups[].message_ids[] | select(.id == \"$responds_to\") | .hypothesis
-    " | head -1)
+    hypothesis_ref=$(echo "$content" | yq -r --arg mid "$responds_to" '
+      .follow_ups[].message_ids[] | select(.id == $mid) | .hypothesis
+    ' | head -1)
 
     # Extract hypothesis ID (e.g., "H1" from "H1: title" or "Hypothesis H1: title")
     h_id=$(echo "$hypothesis_ref" | grep -oE 'H[0-9_]+' | head -1)
     if [ -n "$h_id" ]; then
-      content=$(echo "$content" | yq "
-        (.hypotheses[] | select(.id == \"$h_id\")).cycles_without_evidence = 0 |
-        (.hypotheses[] | select(.id == \"$h_id\")).decay_state = \"active\" |
-        (.hypotheses[] | select(.id == \"$h_id\")).last_evidence_date = \"$now_ts\"
-      ")
+      content=$(echo "$content" | yq --arg hid "$h_id" --arg ts "$now_ts" '
+        (.hypotheses[] | select(.id == $hid)).cycles_without_evidence = 0 |
+        (.hypotheses[] | select(.id == $hid)).decay_state = "active" |
+        (.hypotheses[] | select(.id == $hid)).last_evidence_date = $ts
+      ')
     fi
 
-    content=$(echo "$content" | yq ".last_updated = \"$now_ts\"")
+    content=$(echo "$content" | yq --arg ts "$now_ts" '.last_updated = $ts')
 
     # Write updated growth state (atomic, under lock)
     growth_write "$user" "$content"
