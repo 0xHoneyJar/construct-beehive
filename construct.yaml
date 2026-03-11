@@ -3,6 +3,8 @@ name: Observer
 slug: observer
 version: 2.0.0
 description: User truth capture skills for hypothesis-first research
+domain:
+  - analytics
 author: 0xHoneyJar
 license: MIT
 skills:
