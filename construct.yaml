@@ -87,6 +87,17 @@ events:
         issue_url: string
   consumes:
     - event: forge.crucible.journey_validated
+type: skill-pack
+composition_paths:
+  writes:
+    - grimoires/laboratory/canvases/
+    - grimoires/laboratory/journeys/
+    - grimoires/laboratory/synthesis/
+compose_with:
+  - slug: crucible
+    relationship: "Circular validation — Observer captures user truth, Crucible validates journeys, Observer consumes validation results"
+  - slug: artisan
+    relationship: "Canonical pairing — Observer canvases provide user truth that informs Artisan's taste decisions"
 pack_dependencies:
   - slug: crucible
   - slug: artisan
