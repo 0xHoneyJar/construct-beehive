@@ -1,9 +1,9 @@
 schema_version: 3
-name: Observer
+name: Beehive
 slug: observer
-version: 2.0.0
-description: Captures what users actually mean, not what they say. Hypothesis-first research that forms theories from quotes, validates journeys through live walkthroughs, and files the gaps between expectation and reality. 29 skills. Zero assumptions.
-short_description: "Hypothesis-first user research"
+version: 3.0.0
+description: Builds the structure so the colony can thrive. Patient, Mom Test-style probing that reads the signals a living system gives off — what users need, not what they say they want. Tends the hive, harvests the honey, never controls the swarm. 29 skills. Zero extraction.
+short_description: "Tend the colony, read the signals"
 domain:
   - analytics
 author: 0xHoneyJar
