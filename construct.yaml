@@ -2,7 +2,7 @@ schema_version: 3
 name: Beehive
 slug: observer
 version: 3.0.0
-description: Builds the structure so the colony can thrive. Patient, Mom Test-style probing that reads the signals a living system gives off — what users need, not what they say they want. Tends the hive, harvests the honey, never controls the swarm. 29 skills. Zero extraction.
+description: "Builds the hive so the colony can thrive. Watches how people actually use your product, asks the questions they didn't know they needed to answer, and reads the signals a living system gives off — without ever extracting from the people you're learning from."
 short_description: "Tend the colony, read the signals"
 domain:
   - analytics
