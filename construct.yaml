@@ -101,6 +101,16 @@ compose_with:
 pack_dependencies:
   - slug: crucible
   - slug: artisan
+capabilities:
+  model_tier: sonnet
+  danger_level: moderate
+  effort_hint: medium
+  downgrade_allowed: true
+  execution_hint: sequential
+  requires:
+    tool_calling: true
+    thinking_traces: false
+    vision: false
 identity:
   persona: identity/persona.yaml
   expertise: identity/expertise.yaml
