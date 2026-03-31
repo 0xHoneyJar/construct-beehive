@@ -2,8 +2,8 @@ schema_version: 3
 name: Beehive
 slug: observer
 version: 3.0.0
-description: "Builds the hive so the colony can thrive. Watches how people actually use your product, asks the questions they didn't know they needed to answer, and reads the signals a living system gives off — without ever extracting from the people you're learning from."
-short_description: "Tend the colony, read the signals"
+description: "Product analytics and user research pipeline. Capture feedback from Discord, Telegram, and direct sources. Synthesize into user journey maps and gap reports. File issues to GitHub/Linear. Hypothesis-first: forms theories from user quotes, not assumptions."
+short_description: "User research + feedback pipeline"
 domain:
   - analytics
 author: 0xHoneyJar
