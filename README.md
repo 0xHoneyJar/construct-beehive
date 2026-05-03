@@ -1,3 +1,5 @@
+> **Status: archived — byte-identical mirror of [construct-observer](https://github.com/0xHoneyJar/construct-observer) at HEAD `d1d8a09c684b`. New work happens in construct-observer. Last verified 2026-05-02.**
+
 # Observer
 
 *"The user is never wrong about their experience. They are only ever wrong about their explanation of it."*
